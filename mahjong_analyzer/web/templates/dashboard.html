@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block title %}{{ my_name or "自分" }} のダッシュボード - mahjong-analyzer{% endblock %}
+{% block content %}
+
+<div class="brand">
+  <div class="brand-mark">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M8 15.5V9.5C8 8.4 8.9 7.5 10 7.5H14C15.1 7.5 16 8.4 16 9.5V15.5" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      <circle cx="12" cy="12.2" r="1.7" fill="white"/>
+    </svg>
+  </div>
+  <div class="brand-name">mahjong-analyzer</div>
+</div>
+<h1>{{ my_name or "自分" }} のダッシュボード</h1>
+<p class="muted" style="margin-top:0">account_id: <code>{{ account_id }}</code></p>
+
+<div class="card filter-card">
+  <form method="get" action="/dashboard">
+    <input type="hidden" name="account_id" value="{{ account_id }}">
+    <div class="filter-field">
+      <label for="f-recent">直近N戦</label>
+      <input type="number" id="f-recent" name="recent" min="1" value="{{ filter_recent }}" placeholder="全期間">
+    </div>
+    <div class="filter-field">
+      <label for="f-from">期間(開始)</label>
+      <input type="date" id="f-from" name="date_from" value="{{ filter_date_from }}">
+    </div>
+    <div class="filter-field">
+      <label for="f-to">期間(終了)</label>
+      <input type="date" id="f-to" name="date_to" value="{{ filter_date_to }}">
+    </div>
+    <button type="submit">適用</button>
+    {% if filter_active %}<a class="filter-reset" href="/dashboard?account_id={{ account_id }}">フィルター解除</a>{% endif %}
+  </form>
+  <p class="muted filter-summary">{{ report.games_count }} / {{ total_games_available }} 半荘を対象に集計{% if filter_active %}(フィルター適用中){% endif %}</p>
+</div>
+
+<h2>対局概要</h2>
+{% if my_stats %}
+<div class="stat-grid">
+  <div class="stat-tile"><div class="stat-label">半荘数</div><div class="stat-value">{{ my_stats.games }}</div></div>
+  <div class="stat-tile"><div class="stat-label">平均順位</div><div class="stat-value {{ 'good' if my_stats.avg_rank <= 2.5 else 'bad' }}">{{ "%.2f"|format(my_stats.avg_rank) }}</div></div>
+  <div class="stat-tile"><div class="stat-label">和了率</div><div class="stat-value">{{ "%.1f"|format(my_stats.win_rate * 100) }}%</div></div>
+  <div class="stat-tile"><div class="stat-label">放銃率</div><div class="stat-value {{ 'good' if my_stats.deal_in_rate <= 0.13 else ('bad' if my_stats.deal_in_rate >= 0.16 else '') }}">{{ "%.1f"|format(my_stats.deal_in_rate * 100) }}%</div></div>
+  <div class="stat-tile"><div class="stat-label">リーチ率</div><div class="stat-value">{{ "%.1f"|format(my_stats.riichi_rate * 100) }}%</div></div>
+  <div class="stat-tile"><div class="stat-label">副露率</div><div class="stat-value">{{ "%.1f"|format(my_stats.call_rate * 100) }}%</div></div>
+  <div class="stat-tile"><div class="stat-label">平均和了点</div><div class="stat-value">{{ "%.0f"|format(my_stats.avg_win_score) }}</div></div>
+  <div class="stat-tile"><div class="stat-label">平均放銃点</div><div class="stat-value">{{ "%.0f"|format(my_stats.avg_deal_in_score) }}</div></div>
+</div>
+{% else %}
+<div class="empty-note">統計データがありません。</div>
+{% endif %}
+
+<h2>評価軸</h2>
+<p class="muted" style="margin-top:-.5rem">カードをクリックすると詳細をドリルダウン表示します。</p>
+
+<div class="axis-row">
+  <button type="button" class="axis-card overall active" data-panel="panel-overall">
+    <div class="axis-card-label">総合評価</div>
+    <div class="axis-card-score">{{ overall_card.score if overall_card.available else "—" }}</div>
+    <div class="axis-card-sub">{{ overall_card.sample_size }}件</div>
+  </button>
+  {% for card in axis_cards %}
+  <button type="button" class="axis-card{{ '' if card.available else ' unavailable' }}" data-panel="panel-{{ card.key }}">
+    <div class="axis-card-label">{{ card.label }}</div>
+    <div class="axis-card-score">{{ card.score if card.available else "—" }}</div>
+    <div class="axis-card-sub">{{ card.sample_size }}件{% if not card.available %} ・ データなし{% endif %}</div>
+  </button>
+  {% endfor %}
+</div>
+
+<div class="panel" id="panel-overall">
+  <div class="card">
+    <p style="margin-top:0">牌効率・押し引き・鳴き判断・リーチ判断・着順/点数状況判断・手役打点構築判断の各スコア(0〜100、高いほど良い)を、判断件数で重み付けした平均です。</p>
+    <table>
+      <thead><tr><th>軸</th><th class="num">スコア</th><th class="num">件数</th></tr></thead>
+      <tbody>
+      {% for card in axis_cards %}
+        <tr><td>{{ card.label }}</td><td class="num">{{ card.score if card.available else "—" }}</td><td class="num">{{ card.sample_size }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel" id="panel-efficiency" hidden>
+  <div class="card">
+    <h3 style="margin-top:0">ミスの種類別内訳</h3>
+    {% if report.total_mistakes %}
+    {% set max_count = mistake_categories | map(attribute='count') | max %}
+    {% for cat in mistake_categories %}
+    <div class="category-row">
+      <div class="category-row-head">
+        <span class="category-label">{{ cat.label }}</span>
+        <span class="category-count">{{ cat.count }}件{% if cat.count %} ・ 平均受け入れ差 {{ cat.avg_ukeire_loss }}枚{% endif %}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width: {{ (cat.count / max_count * 100)|round(1) if max_count else 0 }}%"></div></div>
+      <p class="muted category-desc">{{ cat.description }}</p>
+    </div>
+    {% endfor %}
+    <p class="muted" style="font-size:.8rem; margin: 1rem 0 0;">※ 牌効率(速度)の観点のみの分類です。守備を考慮した判断は「押し引き」カード(Mortalレビュー後)で確認できます。</p>
+    {% else %}
+    <div class="empty-note">ミスは検出されていません。</div>
+    {% endif %}
+    {% if report.excluded_defending_count or report.excluded_dora_justified_count %}
+    <p class="muted" style="font-size:.8rem; margin: .6rem 0 0;">
+      除外(ミスとして数えていません): 防御中のシャンテン低下 {{ report.excluded_defending_count }}件 ・
+      打点(ドラ)重視の妥当な選択 {{ report.excluded_dora_justified_count }}件
+    </p>
+    {% endif %}
+  </div>
+  {% if mistake_rows %}
+  <div class="card" style="margin-top:1rem; padding:0;">
+    <div class="scroll-table">
+      <table>
+        <thead>
+          <tr><th>対局</th><th class="num">局</th><th class="num">巡目</th><th>実際の打牌</th><th>最善打</th><th class="num">シャンテン(実際/最善)</th><th class="num">受け入れ差</th><th>種別</th></tr>
+        </thead>
+        <tbody>
+        {% for row in mistake_rows %}
+          <tr>
+            <td>{{ row.date }}</td>
+            <td class="num">{{ row.kyoku }}</td>
+            <td class="num">{{ row.turn }}</td>
+            <td>{{ row.discarded }}</td>
+            <td>{{ row.best_discard }}</td>
+            <td class="num">{{ row.shanten_actual }}/{{ row.shanten_best }}</td>
+            <td class="num">{{ row.ukeire_loss }}</td>
+            <td>{{ row.category }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="panel" id="panel-push_fold" hidden>
+  {% if report.push_fold.sample_size %}
+  <div class="card">
+    <table>
+      <thead><tr><th>指標</th><th class="num">値</th></tr></thead>
+      <tbody>
+        <tr><td>判断件数</td><td class="num">{{ report.push_fold.sample_size }}</td></tr>
+        <tr><td>平均EVロス</td><td class="num">{{ "%.3f"|format(report.push_fold.avg_ev_loss) }}</td></tr>
+        <tr><td>ミス率</td><td class="num">{{ "%.1f"|format(report.push_fold.mistake_rate * 100) }}%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% if report.defense_quality.defending_decisions %}
+  <h3>降り技術の質</h3>
+  <div class="card">
+    <p style="margin-top:0">危険な状況での打牌 {{ report.defense_quality.defending_decisions }} 件中、現物選択 <strong style="color:var(--text)">{{ report.defense_quality.genbutsu_choices }}</strong> 件</p>
+    <div class="bar-track"><div class="bar-fill" style="width: {{ (report.defense_quality.genbutsu_rate * 100)|round(1) }}%"></div></div>
+    <p class="muted" style="font-size:.82rem; margin-bottom:0">現物選択率 {{ "%.1f"|format(report.defense_quality.genbutsu_rate * 100) }}% ・ 現物以外の平均EVロス {{ "%.3f"|format(report.defense_quality.non_genbutsu_avg_ev_loss) }}</p>
+  </div>
+  {% endif %}
+  {% else %}
+  <div class="empty-note"><span class="badge warn">レビュー未実行</span><br><br>Mortalレビュー結果がまだありません。<code>review</code> コマンドを実行してください。</div>
+  {% endif %}
+</div>
+
+<div class="panel" id="panel-naki" hidden>
+  {% if report.naki.sample_size %}
+  <div class="card">
+    <table>
+      <thead><tr><th>指標</th><th class="num">値</th></tr></thead>
+      <tbody>
+        <tr><td>判断件数</td><td class="num">{{ report.naki.sample_size }}</td></tr>
+        <tr><td>平均EVロス</td><td class="num">{{ "%.3f"|format(report.naki.avg_ev_loss) }}</td></tr>
+        <tr><td>ミス率</td><td class="num">{{ "%.1f"|format(report.naki.mistake_rate * 100) }}%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-note"><span class="badge warn">レビュー未実行</span><br><br>Mortalレビュー結果がまだありません。<code>review</code> コマンドを実行してください。</div>
+  {% endif %}
+</div>
+
+<div class="panel" id="panel-riichi" hidden>
+  {% if report.riichi.sample_size %}
+  <div class="card">
+    <table>
+      <thead><tr><th>指標</th><th class="num">値</th></tr></thead>
+      <tbody>
+        <tr><td>判断件数</td><td class="num">{{ report.riichi.sample_size }}</td></tr>
+        <tr><td>平均EVロス</td><td class="num">{{ "%.3f"|format(report.riichi.avg_ev_loss) }}</td></tr>
+        <tr><td>ミス率</td><td class="num">{{ "%.1f"|format(report.riichi.mistake_rate * 100) }}%</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-note"><span class="badge warn">レビュー未実行</span><br><br>Mortalレビュー結果がまだありません。<code>review</code> コマンドを実行してください。</div>
+  {% endif %}
+</div>
+
+<div class="panel" id="panel-rank_strategy" hidden>
+  {% if report.rank_strategy.overall.sample_size %}
+  <div class="card">
+    <table>
+      <thead><tr><th>状況</th><th class="num">件数</th><th class="num">平均EVロス</th></tr></thead>
+      <tbody>
+        <tr><td>全体</td><td class="num">{{ report.rank_strategy.overall.sample_size }}</td><td class="num">{{ "%.3f"|format(report.rank_strategy.overall.avg_ev_loss) }}</td></tr>
+        {% for rank, s in report.rank_strategy.by_rank.items() %}
+        <tr><td>{{ rank }}位時</td><td class="num">{{ s.sample_size }}</td><td class="num">{{ "%.3f"|format(s.avg_ev_loss) }}</td></tr>
+        {% endfor %}
+        <tr><td>オーラス</td><td class="num">{{ report.rank_strategy.all_last.sample_size }}</td><td class="num">{{ "%.3f"|format(report.rank_strategy.all_last.avg_ev_loss) }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-note"><span class="badge warn">レビュー未実行</span><br><br>Mortalレビュー結果がまだありません。<code>review</code> コマンドを実行してください。</div>
+  {% endif %}
+</div>
+
+<div class="panel" id="panel-hand_value" hidden>
+  {% if report.hand_value.value_favoring + report.hand_value.pure_mistakes %}
+  <div class="card">
+    <p style="margin-top:0">牌効率ミス {{ report.hand_value.efficiency_mistakes }} 件中、打点重視の妥当な選択 <strong style="color:var(--text)">{{ report.hand_value.value_favoring }}</strong> 件、
+    純粋な失着 <strong style="color:var(--text)">{{ report.hand_value.pure_mistakes }}</strong> 件</p>
+    <div class="bar-track"><div class="bar-fill" style="width: {{ (report.hand_value.value_favoring_rate * 100)|round(1) }}%"></div></div>
+    <p class="muted" style="font-size:.82rem; margin-bottom:0">妥当率 {{ "%.1f"|format(report.hand_value.value_favoring_rate * 100) }}%</p>
+  </div>
+  {% else %}
+  <div class="empty-note"><span class="badge warn">レビュー未実行</span><br><br>Mortalレビュー結果がまだありません。<code>review</code> コマンドを実行してください。</div>
+  {% endif %}
+</div>
+
+<h2>メンタル/コンディション傾向</h2>
+{% if not report.condition_timeline %}
+<div class="empty-note">対局開始時刻の情報がある牌譜がありません。</div>
+{% else %}
+<div class="card">
+  <div style="position:relative; height:260px;">
+    <canvas id="conditionChart"></canvas>
+  </div>
+</div>
+
+<h3>コンディションを裏付けるデータ</h3>
+<div class="card">
+  <p class="insight-heading">セッション内の順番による平均ミス率(疲労・慣れの影響)</p>
+  {% for b in report.condition_insights.by_session_position %}
+  <div class="category-row">
+    <div class="category-row-head">
+      <span class="category-label">{{ b.label }}</span>
+      <span class="category-count">{{ "%.1f"|format(b.avg_mistake_rate * 100) }}%(n={{ b.sample_size }})</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width: {{ (b.avg_mistake_rate * 100)|round(1) }}%"></div></div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <p class="insight-heading">直前の対局がラスだった時の影響(同一セッション内)</p>
+  {% if report.condition_insights.after_last_place and report.condition_insights.after_other %}
+  <div class="stat-grid" style="grid-template-columns: repeat(2, 1fr); max-width: 480px;">
+    <div class="stat-tile">
+      <div class="stat-label">{{ report.condition_insights.after_last_place.label }}</div>
+      <div class="stat-value {{ 'bad' if report.condition_insights.after_last_place.avg_mistake_rate > report.condition_insights.after_other.avg_mistake_rate else 'good' }}">
+        {{ "%.1f"|format(report.condition_insights.after_last_place.avg_mistake_rate * 100) }}%
+      </div>
+      <div class="muted" style="font-size:.75rem; margin-top:.2rem;">n={{ report.condition_insights.after_last_place.sample_size }}</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">{{ report.condition_insights.after_other.label }}</div>
+      <div class="stat-value">{{ "%.1f"|format(report.condition_insights.after_other.avg_mistake_rate * 100) }}%</div>
+      <div class="muted" style="font-size:.75rem; margin-top:.2rem;">n={{ report.condition_insights.after_other.sample_size }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty-note">同一セッション内で連戦したデータが不足しているため算出できません。</div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top:1rem;">
+  <p class="insight-heading">時間帯による平均ミス率</p>
+  {% if report.condition_insights.by_time_of_day %}
+  {% for b in report.condition_insights.by_time_of_day %}
+  <div class="category-row">
+    <div class="category-row-head">
+      <span class="category-label">{{ b.label }}</span>
+      <span class="category-count">{{ "%.1f"|format(b.avg_mistake_rate * 100) }}%(n={{ b.sample_size }})</span>
+    </div>
+    <div class="bar-track"><div class="bar-fill" style="width: {{ (b.avg_mistake_rate * 100)|round(1) }}%"></div></div>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div class="empty-note">データがありません。</div>
+  {% endif %}
+</div>
+
+<h3>対局ごとの推移(生データ)</h3>
+<div class="card" style="padding:0;">
+  <div class="scroll-table">
+    <table>
+      <thead><tr><th>対局日時</th><th class="num">セッション内何局目</th><th class="num">ミス率</th><th class="num">偏差値</th></tr></thead>
+      <tbody>
+      {% for row in condition_rows %}
+        <tr>
+          <td>{{ row.condition.date_label }}</td>
+          <td class="num">{{ row.condition.games_into_session }}</td>
+          <td class="num">{{ "%.1f"|format(row.condition.mistake_rate * 100) }}%</td>
+          <td class="num">{{ row.deviation }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+const chartData = {{ condition_chart_json | safe }};
+const ctx = document.getElementById('conditionChart').getContext('2d');
+const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+gradient.addColorStop(0, accent + '55');
+gradient.addColorStop(1, accent + '00');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: chartData.labels,
+    datasets: [{
+      label: 'ミス率(%)',
+      data: chartData.rates,
+      borderColor: accent,
+      backgroundColor: gradient,
+      fill: true,
+      tension: 0.35,
+      pointRadius: 2.5,
+      pointBackgroundColor: accent,
+      borderWidth: 2.5,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,.15)' }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+</script>
+{% endif %}
+
+<div class="footer-link"><a href="/">&larr; 戻る</a></div>
+
+<script>
+document.querySelectorAll('.axis-card').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.axis-card').forEach(function (b) { b.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function (p) { p.hidden = true; });
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.panel).hidden = false;
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,35 @@
+[project]
+name = "mahjong-analyzer"
+version = "0.1.0"
+description = "雀魂(MahjongSoul)牌譜の取得・解析・統計・打牌ミス検出ツール"
+requires-python = ">=3.10"
+dependencies = [
+    "mahjong>=1.2.0",
+    "websockets>=12.0",
+    "protobuf>=4.25",
+    "aiohttp>=3.9",
+    "python-dotenv>=1.0",
+    "typer>=0.12",
+    "rich>=13.0",
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+mahjong-analyzer = "mahjong_analyzer.cli:app"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["mahjong_analyzer*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,251 @@
+{
+  "uuid": "fixture-0001",
+  "head": {
+    "accounts": [
+      {
+        "seat": 0,
+        "nickname": "Alice",
+        "account_id": 1
+      },
+      {
+        "seat": 1,
+        "nickname": "Bob",
+        "account_id": 2
+      },
+      {
+        "seat": 2,
+        "nickname": "Carl",
+        "account_id": 3
+      },
+      {
+        "seat": 3,
+        "nickname": "Dan",
+        "account_id": 4
+      }
+    ],
+    "result": {
+      "players": [
+        {
+          "seat": 0,
+          "total_point": 24000
+        },
+        {
+          "seat": 1,
+          "total_point": 26000
+        },
+        {
+          "seat": 2,
+          "total_point": 21100
+        },
+        {
+          "seat": 3,
+          "total_point": 28900
+        }
+      ]
+    }
+  },
+  "records": [
+    {
+      "name": ".lq.RecordNewRound",
+      "data": {
+        "chang": 0,
+        "ju": 1,
+        "ben": 1,
+        "dora": "0p",
+        "liqibang": 1,
+        "scores": [
+          25000,
+          25000,
+          25000,
+          25000
+        ],
+        "tiles0": [
+          "1m",
+          "1m",
+          "2m",
+          "3m",
+          "4p",
+          "5p",
+          "6p",
+          "7s",
+          "8s",
+          "9s",
+          "1s",
+          "1s",
+          "1s"
+        ],
+        "tiles1": [
+          "2m",
+          "3m",
+          "4m",
+          "5m",
+          "6m",
+          "7m",
+          "1p",
+          "2p",
+          "3p",
+          "4s",
+          "5s",
+          "6s",
+          "9p"
+        ],
+        "tiles2": [
+          "1p",
+          "2p",
+          "3p",
+          "4p",
+          "5p",
+          "6p",
+          "7p",
+          "8p",
+          "4s",
+          "5s",
+          "6s",
+          "1z",
+          "3z"
+        ],
+        "tiles3": [
+          "9m",
+          "9m",
+          "8m",
+          "7m",
+          "6p",
+          "6p",
+          "7p",
+          "8p",
+          "9p",
+          "2s",
+          "3s",
+          "4s",
+          "5z"
+        ]
+      }
+    },
+    {
+      "name": ".lq.RecordDealTile",
+      "data": {
+        "seat": 1,
+        "tile": "5m"
+      }
+    },
+    {
+      "name": ".lq.RecordDiscardTile",
+      "data": {
+        "seat": 1,
+        "tile": "9p",
+        "moqie": true,
+        "is_liqi": false
+      }
+    },
+    {
+      "name": ".lq.RecordDealTile",
+      "data": {
+        "seat": 2,
+        "tile": "0s"
+      }
+    },
+    {
+      "name": ".lq.RecordDiscardTile",
+      "data": {
+        "seat": 2,
+        "tile": "1z",
+        "moqie": true,
+        "is_liqi": true
+      }
+    },
+    {
+      "name": ".lq.RecordAnGangAddGang",
+      "data": {
+        "seat": 0,
+        "type": 2,
+        "tiles": "1s1s1s1s",
+        "doras": [
+          "1z",
+          "2z"
+        ]
+      }
+    },
+    {
+      "name": ".lq.RecordDealTile",
+      "data": {
+        "seat": 0,
+        "tile": "6p"
+      }
+    },
+    {
+      "name": ".lq.RecordDiscardTile",
+      "data": {
+        "seat": 0,
+        "tile": "6p",
+        "moqie": true,
+        "is_liqi": false
+      }
+    },
+    {
+      "name": ".lq.RecordDealTile",
+      "data": {
+        "seat": 1,
+        "tile": "9p"
+      }
+    },
+    {
+      "name": ".lq.RecordDiscardTile",
+      "data": {
+        "seat": 1,
+        "tile": "9p",
+        "moqie": true,
+        "is_liqi": false
+      }
+    },
+    {
+      "name": ".lq.RecordChiPengGang",
+      "data": {
+        "seat": 2,
+        "type": 0,
+        "tiles": [
+          "7p",
+          "8p",
+          "9p"
+        ],
+        "froms": [
+          2,
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "name": ".lq.RecordDiscardTile",
+      "data": {
+        "seat": 2,
+        "tile": "3z",
+        "moqie": false,
+        "is_liqi": false
+      }
+    },
+    {
+      "name": ".lq.RecordHule",
+      "data": {
+        "delta_scores": [
+          0,
+          0,
+          -3900,
+          3900
+        ],
+        "scores": [
+          24000,
+          26000,
+          21100,
+          28900
+        ],
+        "hules": [
+          {
+            "seat": 3,
+            "zimo": false,
+            "hu_tile": "3z"
+          }
+        ]
+      }
+    }
+  ]
+}

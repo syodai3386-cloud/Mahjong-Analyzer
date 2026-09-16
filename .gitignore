@@ -1,0 +1,14 @@
+.env
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+# Mortalモデル等の再ダウンロード可能な大容量ファイル(GitHubの100MB制限にも抵触するため)
+mortal/
+# mitmproxyの生通信キャプチャ(認証トークン等の機密情報を含み、かつ90MB超でGitHub的にも不適)
+capture/*.flow
+# 参考保存した第三者Webページ(プロジェクトのソースではない)
+capture/paifu_wiki.html
